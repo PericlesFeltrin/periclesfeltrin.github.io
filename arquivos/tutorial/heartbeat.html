@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>Péricles Pinheiro Feltrin</title>
+
+  <meta name="description" content="Péricles Pinheiro Feltrin bacharel em ciência da computação e desenvolvedor">
+  <meta name="author" content="periclesfeltrin">
+  <meta name="robots" content="index, follow">
+  <meta name="keywords" content="Péricles, Pinheiro, Feltrin, Computação, Desenvolvedor, Heartbeat, Tutorial, Alta Disponibilidade, Linux">
+
+  <title>Tutorial Heartbeat - Péricles Pinheiro Feltrin</title>
+</head>
+<link href="../../css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<link href="../../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<link href="../../css/font-awesome.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+<body>
+
+  <nav class="light-blue lighten-1" role="navigation">
+  </nav>
+
+  <div class="row">
+    <div class="col s12 m12 l12">
+      <h1 class="header center orange-text">
+        <center>Tutorial de Alta Disponibilidade</center>
+      </h1>
+      <hr>
+      <h1><center>Heartbeat</center></h1>
+      <br><br>
+
+			<p align="right">
+        <i class="fa fa-exclamation-triangle deep-orange-text text-accent-4"></i>
+        Obs. 1: Utilizado em distribuições Linux baseadas em Debian e Ubuntu.
+        <br>
+        <i class="fa fa-exclamation-triangle deep-orange-text text-accent-4"></i>
+        Obs. 2: Todos comandos necessitam da permissão root (sudo).
+      </p>
+      <br><br>
+
+			<h3><i class="fa fa-download"></i> Instalação Heartbeat</h3>
+			<p class="card-panel light-blue lighten-3">
+			     $ apt-get install heartbeat
+      </p>
+
+			<h3><i class="fa fa-cogs"></i> Configuração</h3>
+
+			<ol start="1">
+			  <li>Acesse a pasta <code>/etc/heartbeat/</code></li>
+        <p class="card-panel light-blue lighten-3">
+  			     $ cd /etc/heartbeat/
+        </p>
+      </ol>
+
+      <ol start="2">
+				<li>Crie/Edite o arquivo <code>authkeys</code></li>
+        <div class="card-panel">
+    			<ul>
+    				<li>A primeira linha é número de autorização, uma vez que é possível ter vários servidores ou ips configurados em caso de falha.</li>
+    				<li>A segunda linha é a senha ou chave de autorizaçao compartilhada.</li>
+    				<li>Este arquivo deve ser igual em ambos os servidores.</li>
+    			</ul>
+    			<p class="card-panel light-blue lighten-3">
+            auth 1 <br>
+            1 sha1 SuaSenhaPersonalizada
+          </p>
+        </div>
+      </ol>
+
+      <ol start="3">
+				<li>Alterar permissões do arquivo <code>authkeys</code></li>
+			  <div class="card-panel">
+    			<ul>
+    				<li>Devemos alterar as permissões do arquivo, que não pode ser lido geral.</li>
+    				<li>Se não for alterado o Heartbeat falhará.</li>
+    			</ul>
+          <p class="card-panel light-blue lighten-3">
+			         $ chmod 600 authkeys
+          </p>
+        </div>
+      </ol>
+
+      <ol start="4">
+				<li>Crie/Edite o arquivo <code>haresources</code></li>
+        <div class="card-panel">
+    			<ul>
+    				<li>O conteúdo deste arquivo deverá conter apenas o IP que será compartilhado (o IP público normalmente atríbuido ao Master/Servidor principal).</li>
+    				<li>Este arquivo deve ser igual em ambos os servidores.</li>
+    			</ul>
+          <p class="card-panel light-blue lighten-3">
+			         master 192.168.0.2/24
+          </p>
+        </div>
+      </ol>
+
+      <ol start="5">
+				<li>Crie/Edite o arquivo <code>ha.cf</code></li>
+        <ul>
+          <li><i class="fa fa-exclamation-triangle deep-orange-text text-accent-4"></i> Obs.: O arquivo criado no Master é diferente do arquivo que será criado no Slave.</li>
+        </ul>
+
+        <div class="card-panel">
+          <ul>
+          	<li>Conteúdo do arquivo no servidor Master:</li>
+    			</ul>
+          <p class="card-panel light-blue lighten-3">
+            logfacility daemon <br>
+            keepalive 2 <br>
+            deadtime 15 <br>
+            warntime 5 <br>
+            initdead 120 <br>
+            udpport 694 <br>
+            ucast eth0 192.168.0.3 <i>#O endereço IP privado do servidor Slave.</i> <br>
+            auto_failback on <br>
+            node master <i>#O hostname do servidor Master. </i><br>
+            node slave <i>#O hostname do servidor Slave. </i><br>
+            respawn hacluster /usr/lib/heartbeat/ipfail <br>
+            use_logd yes
+          </p>
+        </div>
+        <div class="card-panel light-blue lighten-3">
+          <ul>
+      		    <li>Conteúdo do arquivo no servidor Slave:</li>
+      		</ul>
+          <p class="card-panel">
+      			logfacility daemon <br>
+            keepalive 2 <br>
+            deadtime 15 <br>
+            warntime 5 <br>
+            initdead 120 <br>
+            udpport 694 <br>
+            ucast eth0 192.168.0.2 <i>#O endereço IP privado do servidor Master. </i><br>
+            auto_failback on <br>
+            node master <i>#O hostname do servidor Master.</i><br>
+            node slave <i>#O hostname do servidor Slave. </i><br>
+            respawn hacluster /usr/lib/heartbeat/ipfail <br>
+            use_logd yes
+          </p>
+        </div>
+  			<ul>
+  				<li><strong>use_logd yes</strong> – habilita log.</li>
+  				<li><strong>keepalive 2</strong> – tempo em segundos entre um “heartbeat” e outro.</li>
+  				<li><strong>deadtime 15</strong> – Tempo que o heartbeat aguarda por uma resposta até determinar que o nó esta morto (<em>time out</em>).</li>
+  				<li><strong>warntime 5</strong> – Tempo que o hearbeat aguarda por uma resposta para disparar um aviso de atraso (<em>late warning</em>).</li>
+  				<li><strong>initdead 120</strong> – Quando você reinicia todas as máquinas do <em>cluster</em> ao mesmo tempo, pode haver uma diferença de tempo entre as máquinas até que subam todos os serviços. Esse parâmetro cuida dessa situação. Esse tempo é contado somente quando o heartbeat inicia o seu serviço.</li>
+  				<li><strong>ucast eth0</strong> – eth0 seria a interface usada pelo heartbeat para o envio de broadcast. É através dessa interface que o heartbeat ficará “pingando” os outros nós do cluster. Normalmente esta interface é <em>cross</em>. Pode ser que o valor desse parâmetro mude de servidor para servidor dependendo do nome da interface que foi usada no <em>cross</em>.</li>
+  				<li><strong>node</strong> – nomes dos servidores presentes no cluster.</li>
+  				<li><strong>auto_failback on</strong> – Com o <em>auto_failback on</em>, quando ocorre uma queda no primeiro nó (master neste momento), o segundo nó assume como master. Quando o primeiro nó voltar da queda, o segundo nó passa o master para o nó 1 novamente. Com a opção <em>off</em>, o primeiro nó ao voltar da queda sobe como slave.</li>
+  			</ul>
+      </ol>
+
+      <ol start="6">
+				<li>Efetuar restart no serviço</li>
+        <p class="card-panel light-blue lighten-3">
+           $ /etc/init.d/heartbeat restart
+        </p>
+      </ol>
+
+    </div>
+  </div>
+
+  <footer class="page-footer orange">
+    <div class="container">
+      <div class="row">
+        <div class="col l6 s12">
+          <h5 class="white-text center">Péricles Pinheiro Feltrin</h5>
+          <p class="grey-text text-lighten-4 center">
+            <i class="fa fa-envelope-o"></i> periclesfeltrin@gmail.com
+          </p>
+        </div>
+        <div class="col l3 s12">
+          <h5 class="white-text"></h5>
+          <ul class="center">
+            <li><a target="_blank" href="https://br.linkedin.com/in/periclesfeltrin"><i class="white-text fa fa-linkedin fa-2x"></i></a></li>
+            <li><a target="_blank" href="https://github.com/PericlesFeltrin"><i class="white-text fa fa-github fa-2x"></i></a></li>
+          </ul>
+        </div>
+        <div class="col l3 s12">
+          <h5 class="white-text"></h5>
+          <ul class="center">
+            <li><a target="_blank" href="http://fb.com/periclesfeltrin"><i class="white-text fa fa-facebook fa-2x"></i></a></li>
+            <li><a target="_blank" href="https://youtube.com/feltrin12"><i class="white-text fa fa-youtube fa-2x"></i></a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-copyright">
+      <div class="container">
+      Made with <i class="fa fa-heart"></i>
+      </div>
+    </div>
+  </footer>
+
+
+</body>
+<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script src="../../js/materialize.min.js"></script>
+<script src="../../js/init.js"></script>
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-56343306-1', 'auto');
+ga('send', 'pageview');
+
+</script>
+</html>
